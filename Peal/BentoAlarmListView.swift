@@ -83,6 +83,12 @@ private struct HeroTile: View {
                     Spacer()
                     Image(systemName: alarm.icon.systemImage)
                         .foregroundStyle(.white.opacity(0.85))
+                    Menu {
+                        AlarmContextMenu(alarm: alarm, scheduler: scheduler)
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(.white.opacity(0.85))
+                    }
                     Toggle("", isOn: Binding(
                         get: { alarm.isEnabled },
                         set: { scheduler.setEnabled($0, for: alarm.id) }
@@ -95,10 +101,17 @@ private struct HeroTile: View {
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
-                Text(scheduler.subtitle(for: alarm))
-                    .font(.caption)
-                    .foregroundStyle(.white.opacity(0.7))
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(scheduler.subtitle(for: alarm))
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.7))
+                        .lineLimit(1)
+                    if isSkippedToday {
+                        Text("\u{00B7} Skipped")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                    }
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(18)
@@ -109,6 +122,10 @@ private struct HeroTile: View {
         .contextMenu {
             AlarmContextMenu(alarm: alarm, scheduler: scheduler)
         }
+    }
+
+    private var isSkippedToday: Bool {
+        alarm.skippedOccurrenceDate.map(Calendar.current.isDateInToday) ?? false
     }
 }
 
@@ -124,6 +141,13 @@ private struct BentoTile: View {
                     Image(systemName: alarm.icon.systemImage)
                         .foregroundStyle(alarm.colorOption.color)
                     Spacer()
+                    Menu {
+                        AlarmContextMenu(alarm: alarm, scheduler: scheduler)
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .foregroundStyle(.secondary)
+                            .font(.footnote)
+                    }
                     Toggle("", isOn: Binding(
                         get: { alarm.isEnabled },
                         set: { scheduler.setEnabled($0, for: alarm.id) }
@@ -136,10 +160,17 @@ private struct BentoTile: View {
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                Text(scheduler.subtitle(for: alarm))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(scheduler.subtitle(for: alarm))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    if isSkippedToday {
+                        Text("\u{00B7} Skipped")
+                            .font(.caption2.bold())
+                            .foregroundStyle(.indigo)
+                    }
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
@@ -151,6 +182,10 @@ private struct BentoTile: View {
         .contextMenu {
             AlarmContextMenu(alarm: alarm, scheduler: scheduler)
         }
+    }
+
+    private var isSkippedToday: Bool {
+        alarm.skippedOccurrenceDate.map(Calendar.current.isDateInToday) ?? false
     }
 }
 

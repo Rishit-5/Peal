@@ -21,7 +21,7 @@ enum AlarmRecurrence: Codable, Equatable {
     }
 }
 
-struct MonthlyOccurrence: Codable, Equatable {
+struct ScheduledOccurrence: Codable, Equatable {
     let alarmID: UUID
     let date: Date
 }
@@ -33,7 +33,7 @@ struct StoredAlarm: Identifiable, Codable, Equatable {
     var label: String
     var isEnabled: Bool
     var skippedOccurrenceDate: Date? = nil
-    var scheduledMonthlyOccurrences: [MonthlyOccurrence] = []
+    var scheduledOccurrences: [ScheduledOccurrence] = []
     var icon: AlarmIconOption = .alarm
     var colorOption: AlarmColorOption = .orange
     /// True only for a one-time alarm whose single occurrence has fired and
@@ -57,12 +57,20 @@ final class AlarmScheduler: ObservableObject {
     private static let storedAlarmsDefaultsKey = "com.alarmplus.storedAlarms"
     private static let snoozeDuration: TimeInterval = 9 * 60
 
-    /// How many future occurrences of a monthly alarm stay pre-scheduled at once.
-    /// Since AlarmKit can't express "monthly" natively, each occurrence is its own
-    /// one-time alarm — this buffer is what keeps the alarm firing even if the app
-    /// isn't reopened for a while between firings.
-    private static let monthlyBufferSize = 6
-    private static let bufferReminderLeadDays = 5
+    /// How many future occurrences of a weekly or monthly alarm stay pre-scheduled
+    /// at once. Since AlarmKit can't express "skip just one occurrence" natively,
+    /// both recurrence types are simulated as a buffer of individually-scheduled
+    /// one-time alarms — this is what keeps them firing (and skip fully reliable)
+    /// even if the app isn't reopened for a while.
+    private static let occurrenceBufferSize = 6
+
+    /// The reminder fires this fraction of the buffer's remaining span before it
+    /// runs dry, clamped between the min and max — so a short buffer (e.g. an
+    /// every-weekday alarm) gets warned proportionally late instead of almost
+    /// immediately, while a long buffer (e.g. monthly) doesn't wait forever.
+    private static let bufferReminderLeadFraction: Double = 0.25
+    private static let bufferReminderMinLead: TimeInterval = 24 * 60 * 60
+    private static let bufferReminderMaxLead: TimeInterval = 10 * 24 * 60 * 60
 
     private init() {
         authorizationState = manager.authorizationState
@@ -140,7 +148,7 @@ final class AlarmScheduler: ObservableObject {
         updated.recurrence = recurrence
         updated.label = trimmed.isEmpty ? "Alarm" : trimmed
         updated.skippedOccurrenceDate = nil
-        updated.scheduledMonthlyOccurrences = []
+        updated.scheduledOccurrences = []
         updated.icon = icon
         updated.colorOption = colorOption
         // Saving from the editor always (re)activates the alarm — this is also
@@ -218,7 +226,7 @@ final class AlarmScheduler: ObservableObject {
         } else {
             cancelAllSystemAlarms(for: storedAlarms[index])
             storedAlarms[index].isEnabled = false
-            storedAlarms[index].scheduledMonthlyOccurrences = []
+            storedAlarms[index].scheduledOccurrences = []
             persist()
             cancelBufferReminder(for: id)
         }
@@ -252,6 +260,9 @@ final class AlarmScheduler: ObservableObject {
         case .never:
             return alarm.date
         case .weekly(let weekdays):
+            if let soonest = alarm.scheduledOccurrences.map(\.date).min() {
+                return soonest
+            }
             let effective = effectiveWeekdays(weekdays, skippedOccurrenceDate: alarm.skippedOccurrenceDate)
             guard !effective.isEmpty else { return alarm.date }
             let components = Calendar.current.dateComponents([.hour, .minute], from: alarm.date)
@@ -262,7 +273,7 @@ final class AlarmScheduler: ObservableObject {
                 notBefore: notBeforeDate(for: alarm)
             )
         case .monthly(let day):
-            if let soonest = alarm.scheduledMonthlyOccurrences.map(\.date).min() {
+            if let soonest = alarm.scheduledOccurrences.map(\.date).min() {
                 return soonest
             }
             let components = Calendar.current.dateComponents([.hour, .minute], from: alarm.date)
@@ -283,10 +294,10 @@ final class AlarmScheduler: ObservableObject {
 
     private func cancelAllSystemAlarms(for stored: StoredAlarm) {
         switch stored.recurrence {
-        case .never, .weekly:
+        case .never:
             try? manager.cancel(id: stored.id)
-        case .monthly:
-            for occurrence in stored.scheduledMonthlyOccurrences {
+        case .weekly, .monthly:
+            for occurrence in stored.scheduledOccurrences {
                 try? manager.cancel(id: occurrence.alarmID)
             }
         }
@@ -299,38 +310,32 @@ final class AlarmScheduler: ObservableObject {
             return stored
 
         case .weekly(let weekdays):
-            let effective = effectiveWeekdays(weekdays, skippedOccurrenceDate: stored.skippedOccurrenceDate)
-            guard !effective.isEmpty else {
-                // Every day this alarm could fire is skipped right now (e.g. a
-                // once-a-week alarm skipped for today) — nothing to schedule
-                // until the skip clears on its own tomorrow.
-                try? manager.cancel(id: stored.id)
-                return stored
-            }
-            let components = Calendar.current.dateComponents([.hour, .minute], from: stored.date)
-            let time = Alarm.Schedule.Relative.Time(hour: components.hour ?? 0, minute: components.minute ?? 0)
-            let configuration = makeConfiguration(
-                label: stored.label,
-                schedule: .relative(.init(time: time, repeats: .weekly(Array(effective))))
-            )
-            _ = try await manager.schedule(id: stored.id, configuration: configuration)
-            return stored
+            return try await scheduleWeeklyOccurrences(stored, weekdays: weekdays)
 
         case .monthly:
             return try await scheduleMonthlyOccurrences(stored)
         }
     }
 
-    /// AlarmKit has no monthly recurrence primitive, so a monthly alarm is a
-    /// buffer of several individually-scheduled one-time alarms. Expired ones
-    /// are dropped and the buffer is topped back up to `monthlyBufferSize`.
-    private func scheduleMonthlyOccurrences(_ stored: StoredAlarm) async throws -> StoredAlarm {
-        guard case .monthly(let day) = stored.recurrence else { return stored }
+    /// AlarmKit has no "skip one occurrence of a recurring alarm" primitive, so a
+    /// weekly alarm is simulated the same way monthly is: a buffer of individually
+    /// scheduled one-time alarms covering the next `occurrenceBufferSize`
+    /// occurrences across whichever weekdays are selected. Expired ones are
+    /// dropped and the buffer is topped back up every time this runs.
+    private func scheduleWeeklyOccurrences(_ stored: StoredAlarm, weekdays: Set<Locale.Weekday>) async throws -> StoredAlarm {
         var updated = stored
 
+        guard !weekdays.isEmpty else {
+            for occurrence in updated.scheduledOccurrences {
+                try? manager.cancel(id: occurrence.alarmID)
+            }
+            updated.scheduledOccurrences = []
+            return updated
+        }
+
         let skipToday = updated.skippedOccurrenceDate.map(Calendar.current.isDateInToday) ?? false
-        var kept: [MonthlyOccurrence] = []
-        for occurrence in updated.scheduledMonthlyOccurrences {
+        var kept: [ScheduledOccurrence] = []
+        for occurrence in updated.scheduledOccurrences {
             if occurrence.date < Date() {
                 continue
             }
@@ -340,11 +345,49 @@ final class AlarmScheduler: ObservableObject {
             }
             kept.append(occurrence)
         }
-        updated.scheduledMonthlyOccurrences = kept
+        updated.scheduledOccurrences = kept
 
         let components = Calendar.current.dateComponents([.hour, .minute], from: updated.date)
         var notBefore = kept.map(\.date).max() ?? notBeforeDate(for: updated)
-        while updated.scheduledMonthlyOccurrences.count < Self.monthlyBufferSize {
+        while updated.scheduledOccurrences.count < Self.occurrenceBufferSize {
+            let nextDate = Self.nextWeeklyDate(
+                weekdays: weekdays,
+                hour: components.hour ?? 0,
+                minute: components.minute ?? 0,
+                notBefore: notBefore
+            )
+            let alarmID = UUID()
+            try await scheduleFixedAlarm(id: alarmID, date: nextDate, label: updated.label)
+            updated.scheduledOccurrences.append(ScheduledOccurrence(alarmID: alarmID, date: nextDate))
+            notBefore = nextDate
+        }
+
+        return updated
+    }
+
+    /// Same buffering strategy as weekly, since AlarmKit has no monthly
+    /// recurrence primitive either.
+    private func scheduleMonthlyOccurrences(_ stored: StoredAlarm) async throws -> StoredAlarm {
+        guard case .monthly(let day) = stored.recurrence else { return stored }
+        var updated = stored
+
+        let skipToday = updated.skippedOccurrenceDate.map(Calendar.current.isDateInToday) ?? false
+        var kept: [ScheduledOccurrence] = []
+        for occurrence in updated.scheduledOccurrences {
+            if occurrence.date < Date() {
+                continue
+            }
+            if skipToday, Calendar.current.isDateInToday(occurrence.date) {
+                try? manager.cancel(id: occurrence.alarmID)
+                continue
+            }
+            kept.append(occurrence)
+        }
+        updated.scheduledOccurrences = kept
+
+        let components = Calendar.current.dateComponents([.hour, .minute], from: updated.date)
+        var notBefore = kept.map(\.date).max() ?? notBeforeDate(for: updated)
+        while updated.scheduledOccurrences.count < Self.occurrenceBufferSize {
             let nextDate = Self.nextMonthlyDate(
                 day: day,
                 hour: components.hour ?? 0,
@@ -353,7 +396,7 @@ final class AlarmScheduler: ObservableObject {
             )
             let alarmID = UUID()
             try await scheduleFixedAlarm(id: alarmID, date: nextDate, label: updated.label)
-            updated.scheduledMonthlyOccurrences.append(MonthlyOccurrence(alarmID: alarmID, date: nextDate))
+            updated.scheduledOccurrences.append(ScheduledOccurrence(alarmID: alarmID, date: nextDate))
             notBefore = nextDate
         }
 
@@ -468,30 +511,33 @@ final class AlarmScheduler: ObservableObject {
         return notBefore
     }
 
-    /// Reschedules a monthly alarm's local "come back and refresh" notification to
-    /// fire a few days before its farthest buffered occurrence — the one guaranteed,
-    /// OS-delivered signal that survives even if the app never runs in the background.
+    /// Reschedules a weekly or monthly alarm's local "come back and refresh"
+    /// notification to fire some time before its farthest buffered occurrence —
+    /// the one guaranteed, OS-delivered signal that survives even if the app
+    /// never runs in the background. The lead time scales with how much runway
+    /// the buffer actually has, so a short buffer doesn't warn absurdly early
+    /// and a long one doesn't wait until the last minute.
     private func syncBufferReminder(for stored: StoredAlarm) {
         guard
-            case .monthly = stored.recurrence,
+            stored.recurrence.isRecurring,
             stored.isEnabled,
-            let farthest = stored.scheduledMonthlyOccurrences.map(\.date).max()
+            let farthest = stored.scheduledOccurrences.map(\.date).max()
         else {
             cancelBufferReminder(for: stored.id)
             return
         }
 
-        var reminderDate = Calendar.current.date(
-            byAdding: .day,
-            value: -Self.bufferReminderLeadDays,
-            to: farthest
-        ) ?? farthest
+        let span = farthest.timeIntervalSinceNow
+        let proportionalLead = span * Self.bufferReminderLeadFraction
+        let leadTime = min(max(proportionalLead, Self.bufferReminderMinLead), Self.bufferReminderMaxLead)
+
+        var reminderDate = farthest.addingTimeInterval(-leadTime)
         if reminderDate <= Date() {
             reminderDate = Date().addingTimeInterval(60)
         }
 
         let content = UNMutableNotificationContent()
-        content.title = "Check your monthly alarm"
+        content.title = "Check your alarm"
         content.body = "\"\(stored.label)\" hasn't been refreshed in a while — open Peal to keep it scheduled."
         content.sound = .default
 
@@ -518,9 +564,9 @@ final class AlarmScheduler: ObservableObject {
         "com.alarmplus.bufferReminder.\(id.uuidString)"
     }
 
-    /// One-time alarms disappear from the system once they fire; flip their
-    /// local switch off so the list reflects that without deleting them.
-    /// Monthly alarms stay enabled and get their buffer topped back up instead.
+    /// One-time alarms disappear from the system once they fire; flip their local
+    /// switch off so the list reflects that without deleting them. Weekly and
+    /// monthly alarms stay enabled and get their buffer topped back up instead.
     private func reconcile(activeAlarms: [Alarm]) {
         let activeIDs = Set(activeAlarms.map(\.id))
         var changed = false
@@ -536,22 +582,20 @@ final class AlarmScheduler: ObservableObject {
                     storedAlarms[index].hasExpired = true
                     changed = true
                 }
-            case .monthly:
+            case .weekly, .monthly:
                 if stored.isEnabled {
-                    let hasFiredOccurrence = stored.scheduledMonthlyOccurrences.contains { !activeIDs.contains($0.alarmID) }
-                    let bufferLow = stored.scheduledMonthlyOccurrences.count < Self.monthlyBufferSize
+                    let hasFiredOccurrence = stored.scheduledOccurrences.contains { !activeIDs.contains($0.alarmID) }
+                    let bufferLow = stored.scheduledOccurrences.count < Self.occurrenceBufferSize
                     if hasFiredOccurrence || bufferLow {
                         toReschedule.append(stored)
                     }
                 }
-            case .weekly:
-                break
             }
 
             if let skipped = stored.skippedOccurrenceDate, !Calendar.current.isDateInToday(skipped) {
                 storedAlarms[index].skippedOccurrenceDate = nil
                 changed = true
-                if storedAlarms[index].isEnabled, case .weekly = storedAlarms[index].recurrence {
+                if storedAlarms[index].isEnabled, storedAlarms[index].recurrence.isRecurring {
                     toReschedule.append(storedAlarms[index])
                 }
             }
