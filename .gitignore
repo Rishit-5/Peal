@@ -12,3 +12,6 @@ DerivedData/
 *.dSYM
 timeline.xctimeline
 playground.xcworkspace
+
+# Editor / tooling
+.claude/
