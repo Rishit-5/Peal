@@ -6,8 +6,39 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		76BDDD1F8750CAC031FF89B0 /* PealShared in Frameworks */ = {isa = PBXBuildFile; productRef = 1A66BC69C84CC90E55F28202 /* PealShared */; };
+		A714E8BBF0E2CCB9ED7DB2CD /* PealShared in Frameworks */ = {isa = PBXBuildFile; productRef = 42F7D810283FE4CCED92B299 /* PealShared */; };
+		B97706CA828BCA0385813DBA /* PealWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 30877432D1026706D7E805DA /* PealWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D810A485ED03241B4D419B1B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 80DA1F6B3011C8DA0047EFE7 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D58E72E310275DFF6C15C0C8;
+			remoteInfo = PealWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		D3C681D06BD2AA399DAC946D /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				B97706CA828BCA0385813DBA /* PealWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
-		80DA1F733011C8DA0047EFE7 /* Peal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Peal.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		30877432D1026706D7E805DA /* PealWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PealWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		80DA1F733011C8DA0047EFE7 /* Peal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Peal.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -18,24 +49,48 @@
 			);
 			target = 80DA1F723011C8DA0047EFE7 /* Peal */;
 		};
+		846A32C3BB81E3C29B621792 /* Exceptions for "PealWidget" folder in "PealWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D58E72E310275DFF6C15C0C8 /* PealWidgetExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		73C8EB5BB682575EC87A171A /* PealWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				846A32C3BB81E3C29B621792 /* Exceptions for "PealWidget" folder in "PealWidgetExtension" target */,
+			);
+			path = PealWidget;
+			sourceTree = "<group>";
+		};
 		80DA1F753011C8DA0047EFE7 /* Peal */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				80DA1F813011C8DC0047EFE7 /* Exceptions for "Peal" folder in "Peal" target */,
 			);
-			path = "Peal";
+			path = Peal;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		50AF03B971722F244F58D669 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A714E8BBF0E2CCB9ED7DB2CD /* PealShared in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		80DA1F703011C8DA0047EFE7 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				76BDDD1F8750CAC031FF89B0 /* PealShared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -46,6 +101,7 @@
 			isa = PBXGroup;
 			children = (
 				80DA1F753011C8DA0047EFE7 /* Peal */,
+				73C8EB5BB682575EC87A171A /* PealWidget */,
 				80DA1F743011C8DA0047EFE7 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -54,6 +110,7 @@
 			isa = PBXGroup;
 			children = (
 				80DA1F733011C8DA0047EFE7 /* Peal.app */,
+				30877432D1026706D7E805DA /* PealWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -68,20 +125,46 @@
 				80DA1F6F3011C8DA0047EFE7 /* Sources */,
 				80DA1F703011C8DA0047EFE7 /* Frameworks */,
 				80DA1F713011C8DA0047EFE7 /* Resources */,
+				D3C681D06BD2AA399DAC946D /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				673BD4755D05AD7853C1F76E /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				80DA1F753011C8DA0047EFE7 /* Peal */,
+			);
+			name = Peal;
+			packageProductDependencies = (
+				1A66BC69C84CC90E55F28202 /* PealShared */,
+			);
+			productName = Peal;
+			productReference = 80DA1F733011C8DA0047EFE7 /* Peal.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D58E72E310275DFF6C15C0C8 /* PealWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7B95E909348334896A68F812 /* Build configuration list for PBXNativeTarget "PealWidgetExtension" */;
+			buildPhases = (
+				4F7FD633DBDDE131CA3766E4 /* Sources */,
+				50AF03B971722F244F58D669 /* Frameworks */,
+				CBEE3772A077021721A278F6 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				80DA1F753011C8DA0047EFE7 /* Peal */,
+				73C8EB5BB682575EC87A171A /* PealWidget */,
 			);
-			name = "Peal";
+			name = PealWidgetExtension;
 			packageProductDependencies = (
+				42F7D810283FE4CCED92B299 /* PealShared */,
 			);
-			productName = "Peal";
-			productReference = 80DA1F733011C8DA0047EFE7 /* Peal.app */;
-			productType = "com.apple.product-type.application";
+			productName = PealWidgetExtension;
+			productReference = 30877432D1026706D7E805DA /* PealWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -96,6 +179,9 @@
 					80DA1F723011C8DA0047EFE7 = {
 						CreatedOnToolsVersion = 26.3;
 					};
+					D58E72E310275DFF6C15C0C8 = {
+						CreatedOnToolsVersion = 26.3;
+					};
 				};
 			};
 			buildConfigurationList = 80DA1F6E3011C8DA0047EFE7 /* Build configuration list for PBXProject "Peal" */;
@@ -107,12 +193,16 @@
 			);
 			mainGroup = 80DA1F6A3011C8DA0047EFE7;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				A98B4A553C76EC9A408136DA /* XCLocalSwiftPackageReference "PealShared" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 80DA1F743011C8DA0047EFE7 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				80DA1F723011C8DA0047EFE7 /* Peal */,
+				D58E72E310275DFF6C15C0C8 /* PealWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -125,9 +215,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CBEE3772A077021721A278F6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		4F7FD633DBDDE131CA3766E4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		80DA1F6F3011C8DA0047EFE7 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -137,7 +241,39 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		673BD4755D05AD7853C1F76E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D58E72E310275DFF6C15C0C8 /* PealWidgetExtension */;
+			targetProxy = D810A485ED03241B4D419B1B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		12DA86A78C49EA20E32684B2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WBFMU55PBY;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PealWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = TestOrganization.Peal.PealWidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		80DA1F7C3011C8DC0047EFE7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -268,7 +404,7 @@
 				DEVELOPMENT_TEAM = WBFMU55PBY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Peal/Info.plist";
+				INFOPLIST_FILE = Peal/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -279,7 +415,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "TestOrganization.Peal";
+				PRODUCT_BUNDLE_IDENTIFIER = TestOrganization.Peal;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -303,7 +439,7 @@
 				DEVELOPMENT_TEAM = WBFMU55PBY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Peal/Info.plist";
+				INFOPLIST_FILE = Peal/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -314,7 +450,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "TestOrganization.Peal";
+				PRODUCT_BUNDLE_IDENTIFIER = TestOrganization.Peal;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -327,9 +463,43 @@
 			};
 			name = Release;
 		};
+		E9DF469611A11F5125227C37 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = WBFMU55PBY;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PealWidget/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = TestOrganization.Peal.PealWidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		7B95E909348334896A68F812 /* Build configuration list for PBXNativeTarget "PealWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E9DF469611A11F5125227C37 /* Debug */,
+				12DA86A78C49EA20E32684B2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		80DA1F6E3011C8DA0047EFE7 /* Build configuration list for PBXProject "Peal" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -349,6 +519,26 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A98B4A553C76EC9A408136DA /* XCLocalSwiftPackageReference "PealShared" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = PealShared;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		1A66BC69C84CC90E55F28202 /* PealShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A98B4A553C76EC9A408136DA /* XCLocalSwiftPackageReference "PealShared" */;
+			productName = PealShared;
+		};
+		42F7D810283FE4CCED92B299 /* PealShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A98B4A553C76EC9A408136DA /* XCLocalSwiftPackageReference "PealShared" */;
+			productName = PealShared;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 80DA1F6B3011C8DA0047EFE7 /* Project object */;
 }

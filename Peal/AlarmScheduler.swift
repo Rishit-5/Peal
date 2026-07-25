@@ -5,10 +5,9 @@
 
 import AlarmKit
 import Combine
+import PealShared
 import SwiftUI
 import UserNotifications
-
-struct EmptyAlarmMetadata: AlarmMetadata {}
 
 enum AlarmRecurrence: Codable, Equatable {
     case never
@@ -306,7 +305,7 @@ final class AlarmScheduler: ObservableObject {
     private func scheduleWithSystem(_ stored: StoredAlarm) async throws -> StoredAlarm {
         switch stored.recurrence {
         case .never:
-            try await scheduleFixedAlarm(id: stored.id, date: stored.date, label: stored.label)
+            try await scheduleFixedAlarm(id: stored.id, date: stored.date, label: stored.label, icon: stored.icon, colorOption: stored.colorOption)
             return stored
 
         case .weekly(let weekdays):
@@ -357,7 +356,13 @@ final class AlarmScheduler: ObservableObject {
                 notBefore: notBefore
             )
             let alarmID = UUID()
-            try await scheduleFixedAlarm(id: alarmID, date: nextDate, label: updated.label)
+            try await scheduleFixedAlarm(
+                id: alarmID,
+                date: nextDate,
+                label: updated.label,
+                icon: updated.icon,
+                colorOption: updated.colorOption
+            )
             updated.scheduledOccurrences.append(ScheduledOccurrence(alarmID: alarmID, date: nextDate))
             notBefore = nextDate
         }
@@ -395,7 +400,13 @@ final class AlarmScheduler: ObservableObject {
                 notBefore: notBefore
             )
             let alarmID = UUID()
-            try await scheduleFixedAlarm(id: alarmID, date: nextDate, label: updated.label)
+            try await scheduleFixedAlarm(
+                id: alarmID,
+                date: nextDate,
+                label: updated.label,
+                icon: updated.icon,
+                colorOption: updated.colorOption
+            )
             updated.scheduledOccurrences.append(ScheduledOccurrence(alarmID: alarmID, date: nextDate))
             notBefore = nextDate
         }
@@ -403,12 +414,17 @@ final class AlarmScheduler: ObservableObject {
         return updated
     }
 
-    private func scheduleFixedAlarm(id: UUID, date: Date, label: String) async throws {
-        let configuration = makeConfiguration(label: label, schedule: .fixed(date))
+    private func scheduleFixedAlarm(id: UUID, date: Date, label: String, icon: AlarmIconOption, colorOption: AlarmColorOption) async throws {
+        let configuration = makeConfiguration(label: label, icon: icon, colorOption: colorOption, schedule: .fixed(date))
         _ = try await manager.schedule(id: id, configuration: configuration)
     }
 
-    private func makeConfiguration(label: String, schedule: Alarm.Schedule) -> AlarmManager.AlarmConfiguration<EmptyAlarmMetadata> {
+    private func makeConfiguration(
+        label: String,
+        icon: AlarmIconOption,
+        colorOption: AlarmColorOption,
+        schedule: Alarm.Schedule
+    ) -> AlarmManager.AlarmConfiguration<PealAlarmActivityMetadata> {
         let alertContent = AlarmPresentation.Alert(
             title: LocalizedStringResource(stringLiteral: label),
             secondaryButton: AlarmButton(
@@ -424,8 +440,8 @@ final class AlarmScheduler: ObservableObject {
         let presentation = AlarmPresentation(alert: alertContent, countdown: countdown)
         let attributes = AlarmAttributes(
             presentation: presentation,
-            metadata: EmptyAlarmMetadata(),
-            tintColor: Color.accentColor
+            metadata: PealAlarmActivityMetadata(iconSystemName: icon.systemImage),
+            tintColor: colorOption.color
         )
         return AlarmManager.AlarmConfiguration(
             countdownDuration: .init(preAlert: nil, postAlert: Self.snoozeDuration),

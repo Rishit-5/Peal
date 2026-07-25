@@ -8,7 +8,7 @@ A native iOS alarm app built on Apple's [AlarmKit](https://developer.apple.com/d
 
 - iOS 26.2+
 - Xcode 26+
-- No third-party dependencies — AlarmKit and UserNotifications are both system frameworks
+- No third-party dependencies — AlarmKit, ActivityKit, WidgetKit, and UserNotifications are all system frameworks. `PealShared` is a local Swift package, not an external one.
 
 ## Features
 
@@ -20,6 +20,14 @@ A native iOS alarm app built on Apple's [AlarmKit](https://developer.apple.com/d
 - **Enable / disable.** Pause any alarm without deleting it.
 - **Per-alarm icon and color.** 12 icons and 9 colors to choose from when creating or editing an alarm.
 - **History & revive.** One-time alarms that have fired move to a History screen instead of just disappearing. Swipe to revive with one tap (reschedules for the next available time at the same time of day), or tap through to the editor to pick a different date.
+
+### Ringing: Live Activity & Dynamic Island
+
+While an alarm is ringing or snoozed, Peal drives a custom Live Activity instead of leaving the Lock Screen and Dynamic Island to AlarmKit's default presentation:
+
+- **Lock Screen** shows the alarm's own icon and color, its label, and the current time or countdown, with real Snooze/Stop buttons.
+- **Dynamic Island (expanded)** carries the alarm's color through an icon badge, a bold time/countdown, and Snooze/Stop actions; the compact and minimal states show the icon and, while ringing or snoozing, the time or countdown too.
+- The native full-screen alert (the system's slide-to-stop screen) is AlarmKit's fixed layout — only its button color and icons are themeable via `AlarmButton`/`AlarmAttributes.tintColor`. The Live Activity is where the fully custom layout lives.
 
 ### Layouts & appearance
 
@@ -54,6 +62,19 @@ Peal/
 ├── AlarmContextMenu.swift      Shared skip/delete menu
 ├── PermissionDeniedBanner.swift
 └── Info.plist                 AlarmKit usage description
+
+PealWidget/                    Widget extension: Live Activity UI
+├── PealAlarmLiveActivity.swift Lock Screen card + Dynamic Island (all states)
+├── AlarmActivityIntents.swift  Snooze/Stop LiveActivityIntents
+├── PealWidgetBundle.swift
+└── Info.plist
+
+PealShared/                    Local Swift package
+└── Sources/PealShared/AlarmActivityMetadata.swift
+                                AlarmMetadata type shared by the app and widget
+                                targets, so both resolve to one concrete Swift
+                                type — ActivityKit matches a running Live
+                                Activity to its widget by exact type identity.
 ```
 
 ## Permissions
