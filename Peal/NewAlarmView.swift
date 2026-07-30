@@ -11,6 +11,11 @@ private enum RecurrenceMode: String, CaseIterable {
     case monthly = "Monthly"
 }
 
+private enum EntryMode: String, CaseIterable {
+    case time = "At Time"
+    case timer = "In..."
+}
+
 struct NewAlarmView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var scheduler = AlarmScheduler.shared
@@ -24,6 +29,21 @@ struct NewAlarmView: View {
     @State private var label: String
     @State private var selectedIcon: AlarmIconOption
     @State private var selectedColor: AlarmColorOption
+    @State private var entryMode: EntryMode = .time
+    @State private var timerHours: Int = 0
+    @State private var timerMinutes: Int = 10
+
+    /// The timer entry mode (pick a duration from now, like the Clock app's
+    /// Timer tab) only makes sense for a fresh one-time alarm — there's no
+    /// "in 10 minutes" for an alarm that already has a fixed date, or for a
+    /// recurring one.
+    private var supportsTimerEntry: Bool {
+        existingAlarm == nil && recurrenceMode == .never
+    }
+
+    private var isUsingTimerEntry: Bool {
+        supportsTimerEntry && entryMode == .timer
+    }
 
     private static let weekdayOrder: [Locale.Weekday] = [
         .sunday, .monday, .tuesday, .wednesday, .thursday, .friday, .saturday
@@ -59,7 +79,46 @@ struct NewAlarmView: View {
     var body: some View {
         NavigationStack {
             Form {
-                if recurrenceMode == .never {
+                if supportsTimerEntry {
+                    Picker("Entry Mode", selection: $entryMode) {
+                        ForEach(EntryMode.allCases, id: \.self) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+
+                if isUsingTimerEntry {
+                    HStack(spacing: 0) {
+                        Picker("Hours", selection: $timerHours) {
+                            ForEach(0..<24, id: \.self) { hour in
+                                Text("\(hour) hr").tag(hour)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .labelsHidden()
+
+                        Picker("Minutes", selection: $timerMinutes) {
+                            ForEach(0..<60, id: \.self) { minute in
+                                Text("\(minute) min").tag(minute)
+                            }
+                        }
+                        .pickerStyle(.wheel)
+                        .labelsHidden()
+                    }
+                    .frame(height: 120)
+
+                    if timerHours == 0 && timerMinutes == 0 {
+                        Text("Set a duration greater than zero")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Rings at \(timerFireDate.formatted(date: .omitted, time: .shortened))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } else if recurrenceMode == .never {
                     DatePicker(
                         "Date & Time",
                         selection: $selectedDate,
@@ -85,6 +144,9 @@ struct NewAlarmView: View {
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
+                    .onChange(of: recurrenceMode) { _, newMode in
+                        if newMode != .never { entryMode = .time }
+                    }
 
                     switch recurrenceMode {
                     case .never:
@@ -147,6 +209,7 @@ struct NewAlarmView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { save() }
+                        .disabled(isUsingTimerEntry && timerHours == 0 && timerMinutes == 0)
                 }
             }
         }
@@ -246,6 +309,13 @@ struct NewAlarmView: View {
         return merged
     }
 
+    /// Recomputed from `Date()` rather than cached, so the preview (and the
+    /// actual save) reflect the duration relative to whenever the user
+    /// actually taps Save, not whenever they last touched the wheel.
+    private var timerFireDate: Date {
+        Date().addingTimeInterval(TimeInterval(timerHours * 3600 + timerMinutes * 60))
+    }
+
     private func save() {
         let recurrence: AlarmRecurrence
         switch recurrenceMode {
@@ -254,21 +324,28 @@ struct NewAlarmView: View {
         case .monthly: recurrence = .monthly(day: monthDay)
         }
 
+        let resolvedDate = isUsingTimerEntry ? timerFireDate : selectedDate
+
+        var resolvedLabel = label
+        if isUsingTimerEntry && label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            resolvedLabel = "Timer"
+        }
+
         Task {
             if let existingAlarm {
                 await scheduler.updateAlarm(
                     id: existingAlarm.id,
-                    date: selectedDate,
+                    date: resolvedDate,
                     recurrence: recurrence,
-                    label: label,
+                    label: resolvedLabel,
                     icon: selectedIcon,
                     colorOption: selectedColor
                 )
             } else {
                 await scheduler.createAlarm(
-                    date: selectedDate,
+                    date: resolvedDate,
                     recurrence: recurrence,
-                    label: label,
+                    label: resolvedLabel,
                     icon: selectedIcon,
                     colorOption: selectedColor
                 )
